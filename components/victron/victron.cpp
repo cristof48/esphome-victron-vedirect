@@ -343,37 +343,37 @@ void VictronComponent::handle_value_() {
   int value;
 
   if (label_ == "H23") {
-    this->publish_state_(this->max_power_yesterday_sensor_, parse_float(value_));
+    this->publish_state_(this->max_power_yesterday_sensor_, (float) parse_float(value_));
   } else if (label_ == "H21") {
-    this->publish_state_(this->max_power_today_sensor_, parse_float(value_));
+    this->publish_state_(this->max_power_today_sensor_, (float) parse_float(value_));
   } else if (label_ == "H19") {
-    this->publish_state_(this->yield_total_sensor_, parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_total_sensor_, (float) parse_float(value_) * 10.0);
   } else if (label_ == "H22") {
-    this->publish_state_(this->yield_yesterday_sensor_, parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_yesterday_sensor_, (float) parse_float(value_) * 10.0);
   } else if (label_ == "H20") {
-    this->publish_state_(this->yield_today_sensor_, parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_today_sensor_, (float) parse_float(value_) * 10.0);
   } else if (label_ == "VPV") {
-    this->publish_state_(this->panel_voltage_sensor_, parse_float(value_) * 0.001);
+    this->publish_state_(this->panel_voltage_sensor_, (float) parse_float(value_) * 0.001);
   } else if (label_ == "PPV") {
-    this->publish_state_(this->panel_power_sensor_, parse_float(value_));
+    this->publish_state_(this->panel_power_sensor_, (float) parse_float(value_));
   } else if (label_ == "V") {
-    this->publish_state_(this->battery_voltage_sensor_, parse_float(value_) * 0.001);
+    this->publish_state_(this->battery_voltage_sensor_, (float) parse_float(value_) * 0.001);
   } else if (label_ == "I") {
-    this->publish_state_(this->battery_current_sensor_, parse_float(value_) * 0.001);
+    this->publish_state_(this->battery_current_sensor_, (float) parse_float(value_) * 0.001);
   } else if (label_ == "IL") {
-    this->publish_state_(this->load_current_sensor_, parse_float(value_) * 0.001);
+    this->publish_state_(this->load_current_sensor_, (float) parse_float(value_) * 0.001);
   } else if (label_ == "HSDS") {
-    this->publish_state_(this->day_number_sensor_, parse_float(value_));
+    this->publish_state_(this->day_number_sensor_, (float) parse_float(value_));
   } else if (label_ == "CS") {
-    value = parse_int(value_);
+    value = (int) parse_int(value_);
     this->publish_state_(this->charger_status_sensor_, (float) value);
     this->publish_state_(this->charger_text_sensor_, flash_to_string(charger_status_text(value)));
   } else if (label_ == "ERR") {
-    value = parse_int(value_);
+    value = (int) parse_int(value_);
     this->publish_state_(this->error_code_sensor_, (float) value);
     this->publish_state_(this->error_text_sensor_, flash_to_string(error_code_text(value)));
   } else if (label_ == "MPPT") {
-    value = parse_int(value_);
+    value = (int) parse_int(value_);
     this->publish_state_(this->tracker_operation_sensor_, (float) value);
     this->publish_state_(this->tracker_text_sensor_, tracker_op_text(value));
   } else if (label_ == "FW") {
