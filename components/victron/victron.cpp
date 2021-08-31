@@ -4,7 +4,7 @@
 namespace esphome {
 namespace victron {
 
-static const char *TAG = "victron";
+static const char *const TAG = "victron";
 
 void VictronComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "Victron:");
