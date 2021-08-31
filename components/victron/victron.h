@@ -77,6 +77,9 @@ class VictronComponent : public uart::UARTDevice, public Component {
   text_sensor::TextSensor *fw_version_sensor_{nullptr};
   text_sensor::TextSensor *pid_sensor_{nullptr};
 
+  void publish_state_(sensor::Sensor *sensor, float value);
+  void publish_state_(text_sensor::TextSensor *text_sensor, const std::string &state);
+
   int state_{0};
   std::string label_;
   std::string value_;

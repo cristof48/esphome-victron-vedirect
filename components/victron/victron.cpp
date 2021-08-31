@@ -343,56 +343,39 @@ void VictronComponent::handle_value_() {
   float value;
 
   if (label_ == "H23") {
-    if (max_power_yesterday_sensor_ != nullptr)
-      max_power_yesterday_sensor_->publish_state(parse_float(value_));
+    this->publish_state_(this->max_power_yesterday_sensor_, parse_float(value_));
   } else if (label_ == "H21") {
-    if (max_power_today_sensor_ != nullptr)
-      max_power_today_sensor_->publish_state(parse_float(value_));
+    this->publish_state_(this->max_power_today_sensor_, parse_float(value_));
   } else if (label_ == "H19") {
-    if (yield_total_sensor_ != nullptr)
-      yield_total_sensor_->publish_state(parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_total_sensor_, parse_float(value_) * 10.0);
   } else if (label_ == "H22") {
-    if (yield_yesterday_sensor_ != nullptr)
-      yield_yesterday_sensor_->publish_state(parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_yesterday_sensor_, parse_float(value_) * 10.0);
   } else if (label_ == "H20") {
-    if (yield_today_sensor_ != nullptr)
-      yield_today_sensor_->publish_state(parse_float(value_) * 10.0);
+    this->publish_state_(this->yield_today_sensor_, parse_float(value_) * 10.0);
   } else if (label_ == "VPV") {
-    if (panel_voltage_sensor_ != nullptr)
-      panel_voltage_sensor_->publish_state(parse_float(value_) * 0.001);
+    this->publish_state_(this->panel_voltage_sensor_, parse_float(value_) * 0.001);
   } else if (label_ == "PPV") {
-    if (panel_power_sensor_ != nullptr)
-      panel_power_sensor_->publish_state(parse_float(value_));
+    this->publish_state_(this->panel_power_sensor_, parse_float(value_));
   } else if (label_ == "V") {
-    if (battery_voltage_sensor_ != nullptr)
-      battery_voltage_sensor_->publish_state(parse_float(value_) * 0.001);
+    this->publish_state_(this->battery_voltage_sensor_, parse_float(value_) * 0.001);
   } else if (label_ == "I") {
-    if (battery_current_sensor_ != nullptr)
-      battery_current_sensor_->publish_state(parse_float(value_) * 0.001);
+    this->publish_state_(this->battery_current_sensor_, parse_float(value_) * 0.001);
   } else if (label_ == "IL") {
-    if (load_current_sensor_ != nullptr)
-      load_current_sensor_->publish_state(parse_float(value_) * 0.001);
+    this->publish_state_(this->load_current_sensor_, parse_float(value_) * 0.001);
   } else if (label_ == "HSDS") {
-    if (day_number_sensor_ != nullptr)
-      day_number_sensor_->publish_state(parse_float(value_));
+    this->publish_state_(this->day_number_sensor_, parse_float(value_));
   } else if (label_ == "CS") {
     value = parse_float(value_);
-    if (charger_status_sensor_ != nullptr)
-      charger_status_sensor_->publish_state(value);
-    if (charger_text_sensor_ != nullptr)
-      charger_text_sensor_->publish_state(flash_to_string(charger_status_text(value)));
+    this->publish_state_(this->charger_status_sensor_, value);
+    this->publish_state_(this->charger_text_sensor_, flash_to_string(charger_status_text(value)));
   } else if (label_ == "ERR") {
     value = parse_float(value_);
-    if (error_code_sensor_ != nullptr)
-      error_code_sensor_->publish_state(value);
-    if (error_text_sensor_ != nullptr)
-      error_text_sensor_->publish_state(flash_to_string(error_code_text(value)));
+    this->publish_state_(this->error_code_sensor_, value);
+    this->publish_state_(this->error_text_sensor_, flash_to_string(error_code_text(value)));
   } else if (label_ == "MPPT") {
     value = parse_float(value_);
-    if (tracker_operation_sensor_ != nullptr)
-      tracker_operation_sensor_->publish_state(value);
-    if (tracker_text_sensor_ != nullptr)
-      tracker_text_sensor_->publish_state(tracker_op_text(value));
+    this->publish_state_(this->tracker_operation_sensor_, value);
+    this->publish_state_(this->tracker_text_sensor_, tracker_op_text(value));
   } else if (label_ == "FW") {
     if ((fw_version_sensor_ != nullptr) && !fw_version_sensor_->has_state())
       fw_version_sensor_->publish_state(value_.insert(value_.size() - 2, "."));
@@ -413,6 +396,20 @@ void VictronComponent::handle_value_() {
       //}
     }
   }
+}
+
+void VictronComponent::publish_state_(sensor::Sensor *sensor, float value) {
+  if (sensor == nullptr)
+    return;
+
+  sensor->publish_state(value);
+}
+
+void VictronComponent::publish_state_(text_sensor::TextSensor *text_sensor, const std::string &state) {
+  if (text_sensor == nullptr)
+    return;
+
+  text_sensor->publish_state(state);
 }
 
 }  // namespace victron
