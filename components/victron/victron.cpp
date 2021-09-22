@@ -27,6 +27,22 @@ void VictronComponent::dump_config() {
   LOG_TEXT_SENSOR("  ", "Tracking Mode", tracking_mode_text_sensor_);
   LOG_TEXT_SENSOR("  ", "Firmware Version", firmware_version_text_sensor_);
   LOG_TEXT_SENSOR("  ", "Device Type", device_type_text_sensor_);
+
+  // Smart shunt specific sensors
+  LOG_SENSOR("  ", "Instantaneous power", instantaneous_power_sensor_);
+  LOG_SENSOR("  ", "Time to go", time_to_go_sensor_);
+  LOG_SENSOR("  ", "Consumed amp hours", consumed_amp_hours_sensor_);
+  LOG_SENSOR("  ", "State of Charge", state_of_charge_sensor_);
+  LOG_TEXT_SENSOR("  ", "BMV alarm", bmv_alarm_sensor_);
+  LOG_TEXT_SENSOR("  ", "BMV pid", bmv_sensor_);
+  LOG_SENSOR("  ", "Minimum main (battery) voltage", min_battery_voltage_sensor_);
+  LOG_SENSOR("  ", "Maximum main (battery) voltage", max_battery_voltage_sensor_);
+  LOG_SENSOR("  ", "Amount of charged energy", amount_of_charged_sensor_);
+  LOG_SENSOR("  ", "Number of seconds since last full charge", last_full_charge_sensor_);
+  LOG_SENSOR("  ", "Depth of the deepest discharge", depth_deepest_dis_sensor_);
+  LOG_SENSOR("  ", "Depth of the last discharge", depth_of_the_last_discharge_sensor_);
+  LOG_SENSOR("  ", "Amount of discharged energy", amount_of_discharged_energy_sensor_)
+
   check_uart_settings(19200);
 }
 
@@ -343,7 +359,119 @@ static std::string flash_to_string(const __FlashStringHelper *flash) {
 void VictronComponent::handle_value_() {
   int value;
 
-  if (label_ == "H23") {
+  // See page 5-7 of VE.Direct-Protocol-3.32.pdf
+  //
+  // Label      Units   Description                            BMV60x   BMV70x   BMV71x    MPPT    Phoenix Inverter    Phoenix Charger
+  //
+  // V             mV   Main or channel 1 (battery) voltage       x        x        x        x            x                   x
+  // V2            mV   Channel 2 (battery) voltage                                                                           x
+  // V3            mV   Channel 3 (battery) voltage                                                                           x
+  // VS            mV   Auxiliary (starter) voltage               x        x        x
+  // VM            mV   Mid-point voltage of the battery bank              x        x
+  // DM            %o   Mid-point deviation of the battery bank            x        x
+  // VPV           mV   Panel voltage                                                        x
+  // PPV            W   Panel power                                                          x
+  // I             mA   Main or channel 1 battery current         x        x        x        x                                x
+  // I2            mA   Channel 2 battery current                                                                             x
+  // I3            mA   Channel 3 battery current                                                                             x
+  // IL            mA   Load current                                                         x
+  // LOAD               Load output state (ON/OFF)                                           x
+  // T             °C   Battery temperature                                x        x
+  // P              W   Instantaneous power                                x        x
+  // CE           mAh   Consumed Amp Hours                        x        x        x
+  //
+  // SOC           ‰o   State-of-charge                           x        x        x
+  // TTG          min   Time-to-go                                x        x        x
+  // Alarm              Alarm condition active                    x        x        x
+  // Relay              Relay state                               x        x        x        x            x                   x
+  // AR                 Alarm reason                              x        x        x                     x
+  // OR                 Off reason                                                           x            x
+  // H1           mAh   Depth of the deepest discharge            x        x        x
+  // H2           mAh   Depth of the last discharge               x        x        x
+  // H3           mAh   Depth of the average discharge            x        x        x
+  // H4                 Number of charge cycles                   x        x        x
+  // H5                 Number of full discharges                 x        x        x
+  // H6           mAh   Cumulative Amp Hours drawn                x        x        x
+  // H7            mV   Minimum main (battery) voltage            x        x        x
+  // H8            mV   Maximum main (battery) voltage            x        x        x
+  // H9           sec   Number of seconds since last full charge  x        x        x
+  // H10                Number of automatic synchronizations      x        x        x
+  // H11                Number of low main voltage alarms         x        x        x
+  // H12                Number of high main voltage alarms        x        x        x
+  // H13                Number of low auxiliary voltage alarms    x
+  // H14                Number of high auxiliary voltage alarms   x
+  // H15           mV   Minimum auxiliary (battery) voltage       x        x        x
+  // H16           mV   Maximum auxiliary (battery) voltage       x        x        x
+  // H1    7 0.01 kWh   Amount of discharged energy (BMV) /                x        x
+  //                    Amount of produced energy (DC monitor)
+
+  // H18     0.01 kWh   Amount of charged energy (BMV) /                   x        x
+  //                    Amount of consumed energy (DC monitor)
+  // H19     0.01 kWh   Yield total (user resettable counter)                                x
+  // H20     0.01 kWh   Yield today                                                          x
+  // H21            W   Maximum power today                                                  x
+  // H22     0.01 kWh   Yield yesterday                                                      x
+  // H23            W   Maximum power yesterday                                              x
+  // ERR                Error code                                                           x                                x
+  // CS                 State of operation                                                   x            x                   x
+  // BMV                Model description (deprecated)             x       x        x
+  // FW                 Firmware version (16 bit)                  x       x        x        x            x
+  // FWE                Firmware version (24 bit)                                            x
+  // PID                Product ID                                         x        x        x            x                   x
+  // SER#               Serial number                                                        x            x                   x
+  // HSDS               Day sequence number (0..364)                                         x
+  // MODE               Device mode                                                                       x                   x
+  // AC_OUT_V  0.01 V   AC output voltage                                                                 x
+  // AC_OUT_I   0.1 A   AC output current                                                                 x
+  // AC_OUT_S      VA   AC output apparent power                                                          x
+  // WARN               Warning reason                                                                    x
+  // MPPT               Tracker operation mode                                               x
+  // MON                DC monitor mode                                             x
+
+  if (label_ == "H9") {
+    if (last_full_charge_sensor_ != nullptr)
+      last_full_charge_sensor_->publish_state(atoi(value_.c_str()) / 60);  // sec -> min, NOLINT(cert-err34-c)
+  } else if (label_ == "H1") {
+    if (depth_deepest_dis_sensor_ != nullptr)
+      depth_deepest_dis_sensor_->publish_state(atoi(value_.c_str()) / 1000.0);  // mAh -> Ah, NOLINT(cert-err34-c)
+  } else if (label_ == "H2") {
+    if (depth_of_the_last_discharge_sensor_ != nullptr)
+      depth_of_the_last_discharge_sensor_->publish_state(atoi(value_.c_str()) /
+                                                         1000.0);  // mAh -> Ah, NOLINT(cert-err34-c)
+  } else if (label_ == "H17") {
+    if (amount_of_discharged_energy_sensor_ != nullptr)
+      amount_of_discharged_energy_sensor_->publish_state(atoi(value_.c_str()) * 10.00);  // Wh, NOLINT(cert-err34-c)
+  } else if (label_ == "H18") {
+    if (amount_of_charged_sensor_ != nullptr)
+      amount_of_charged_sensor_->publish_state(atoi(value_.c_str()) * 10.00);  // Wh, NOLINT(cert-err34-c)
+  } else if (label_ == "BMV") {
+    if (bmv_sensor_ != nullptr)
+      bmv_sensor_->publish_state(value_);
+  } else if (label_ == "Alarm") {
+    if (bmv_alarm_sensor_ != nullptr)
+      bmv_alarm_sensor_->publish_state(value_);
+  } else if (label_ == "H7") {
+    if (min_battery_voltage_sensor_ != nullptr)
+      min_battery_voltage_sensor_->publish_state(atoi(value_.c_str()) / 1000.00);  // mV to V, NOLINT(cert-err34-c)
+  } else if (label_ == "H8") {
+    if (max_battery_voltage_sensor_ != nullptr)
+      max_battery_voltage_sensor_->publish_state(atoi(value_.c_str()) / 1000.00);  // mV to V, NOLINT(cert-err34-c)
+  } else if (label_ == "H18") {
+    if (amount_of_charged_sensor_ != nullptr)
+      amount_of_charged_sensor_->publish_state(atoi(value_.c_str()));  // Wh, NOLINT(cert-err34-c)
+  } else if (label_ == "TTG") {
+    if (time_to_go_sensor_ != nullptr)
+      time_to_go_sensor_->publish_state(atoi(value_.c_str()));  // NOLINT(cert-err34-c)
+  } else if (label_ == "SOC") {
+    if (state_of_charge_sensor_ != nullptr)
+      state_of_charge_sensor_->publish_state(atoi(value_.c_str()) * 0.10);  // promiles to %, NOLINT(cert-err34-c)
+  } else if (label_ == "CE") {
+    if (consumed_amp_hours_sensor_ != nullptr)
+      consumed_amp_hours_sensor_->publish_state(atoi(value_.c_str()) / 1000.00);  // NOLINT(cert-err34-c)
+  } else if (label_ == "P") {
+    if (instantaneous_power_sensor_ != nullptr)
+      instantaneous_power_sensor_->publish_state(atoi(value_.c_str()));  // NOLINT(cert-err34-c)
+  } else if (label_ == "H23") {
     if (max_power_yesterday_sensor_ != nullptr)
       max_power_yesterday_sensor_->publish_state(atoi(value_.c_str()));  // NOLINT(cert-err34-c)
   } else if (label_ == "H21") {
@@ -413,6 +541,8 @@ void VictronComponent::handle_value_() {
          // device_type_text_sensor_->publish_state(s);
       //}
     }
+  } else {
+    ESP_LOGW(TAG, "Unsupported message received: Key '%s' with value '%s'", label_.c_str(), value_.c_str());
   }
 }
 
